@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal Physics Test</title>
+    <style>
+        body { margin: 0; background: #222; color: white; font-family: Arial; }
+        #info { position: absolute; top: 10px; left: 10px; z-index: 100; }
+    </style>
+</head>
+<body>
+    <div id="info">Loading...</div>
+    
+    <script>
+        console.log('🎯 Starting minimal test...');
+        
+        // Load Three.js
+        const threeScript = document.createElement('script');
+        threeScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+        threeScript.onload = () => {
+            console.log('✅ Three.js loaded');
+            
+            // Load Cannon-ES
+            const cannonScript = document.createElement('script');
+            cannonScript.src = 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.min.js';
+            cannonScript.onload = () => {
+                console.log('✅ Cannon-ES loaded');
+                startDemo();
+            };
+            cannonScript.onerror = () => {
+                console.log('❌ Cannon-ES failed, trying alternative...');
+                const cannonScript2 = document.createElement('script');
+                cannonScript2.src = 'https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.min.js';
+                cannonScript2.onload = () => {
+                    console.log('✅ Cannon-ES loaded from unpkg');
+                    startDemo();
+                };
+                cannonScript2.onerror = () => {
+                    console.error('❌ All Cannon-ES sources failed');
+                    document.getElementById('info').innerHTML = 'Failed to load Cannon-ES';
+                };
+                document.head.appendChild(cannonScript2);
+            };
+            document.head.appendChild(cannonScript);
+        };
+        threeScript.onerror = () => {
+            console.error('❌ Three.js failed to load');
+            document.getElementById('info').innerHTML = 'Failed to load Three.js';
+        };
+        document.head.appendChild(threeScript);
+        
+        function startDemo() {
+            console.log('🚀 Starting demo...');
+            document.getElementById('info').innerHTML = 'Demo started - check console';
+            
+            // Scene setup
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x333333);
+            
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(5, 5, 5);
+            camera.lookAt(0, 0, 0);
+            
+            const renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            // Physics world
+            const world = new CANNON.World({
+                gravity: new CANNON.Vec3(0, -9.82, 0)
+            });
+            
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(10, 10);
+            const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x666666 });
+            const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+            groundMesh.rotation.x = -Math.PI / 2;
+            scene.add(groundMesh);
+            
+            const groundShape = new CANNON.Plane();
+            const groundBody = new CANNON.Body({ mass: 0 });
+            groundBody.addShape(groundShape);
+            groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+            world.addBody(groundBody);
+            
+            // Cube
+            const cubeGeometry = new THREE.BoxGeometry();
+            const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cubeMesh.position.y = 5;
+            scene.add(cubeMesh);
+            
+            const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+            const cubeBody = new CANNON.Body({ mass: 1 });
+            cubeBody.addShape(cubeShape);
+            cubeBody.position.set(0, 5, 0);
+            world.addBody(cubeBody);
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+            
+            console.log('Scene children:', scene.children.length);
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                world.step(1/60);
+                
+                cubeMesh.position.copy(cubeBody.position);
+                cubeMesh.quaternion.copy(cubeBody.quaternion);
+                
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+            console.log('✅ Animation started');
+        }
+    </script>
+</body>
+</html>
